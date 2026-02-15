@@ -94,3 +94,50 @@ If you have run out of energy or time for your project, put a note at the top of
 =======
 # PanOS
 Make programing fuse with creativity
+=======
+# Pan OS
+
+A high-performance 64-bit monolithic kernel for x86_64. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full specification.
+
+## Phase 0 – Build (GRUB + QEMU)
+
+### Prerequisites
+
+- **x86_64-elf toolchain** (bare-metal, no host libc)
+  - [Build cross-compiler](https://wiki.osdev.org/GCC_Cross-Compiler), or
+  - Ubuntu/Debian: `apt install gcc-x86-64-elf`
+  - Arch: `pacman -S x86_64-elf-gcc`
+  - Fedora: build from source (see osdev wiki)
+- **nasm** – `dnf install nasm` / `apt install nasm`
+- **grub-mkrescue** – `dnf install grub2-tools xorriso` / `apt install grub-pc-bin xorriso`
+- **QEMU** – `dnf install qemu-system-x86` / `apt install qemu-system-x86`
+
+### Build
+
+```bash
+mkdir build && cd build
+# Use toolchain file for proper x86_64-elf (bare-metal) build:
+cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-x86_64-elf.cmake ..
+make
+make pan_iso   # requires grub2-tools, xorriso
+```
+
+Or without toolchain file (uses first `x86_64-elf-gcc` in PATH):
+```bash
+cmake ..
+make
+```
+
+Output: `build/pan_kernel` (always), `build/pan.iso` (if grub-mkrescue available)
+
+### Run
+
+```bash
+# VGA output
+qemu-system-x86_64 -cdrom build/pan.iso
+
+# VGA + serial (for Phase 1 higher-half + serial test)
+qemu-system-x86_64 -cdrom build/pan.iso -serial stdio
+```
+
+Expected (Phase 1): `PAN OS 64 BIT KERNEL INITIALIZED`, `[kernel] kernel_main @ 0x...`, `[kernel] OK: running from higher-half`.
