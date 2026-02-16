@@ -1,0 +1,4 @@
+/home/forbiddentypev/Dev/OS/Pan/build/CMakeFiles/pan_kernel.dir
+/home/forbiddentypev/Dev/OS/Pan/build/CMakeFiles/pan_iso.dir
+/home/forbiddentypev/Dev/OS/Pan/build/CMakeFiles/edit_cache.dir
+/home/forbiddentypev/Dev/OS/Pan/build/CMakeFiles/rebuild_cache.dir

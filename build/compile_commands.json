@@ -1,0 +1,20 @@
+[
+{
+  "directory": "/home/forbiddentypev/Dev/OS/Pan/build",
+  "command": "/home/forbiddentypev/opt/cross/bin/x86_64-elf-g++  -I/home/forbiddentypev/Dev/OS/Pan/kernel/include -I/home/forbiddentypev/Dev/OS/Pan/kernel/arch/x86_64/include -ffreestanding -fno-exceptions -fno-rtti -mno-red-zone -mcmodel=kernel -O2 -nostdlib -Wall -Wextra -fno-asynchronous-unwind-tables -fno-unwind-tables -o CMakeFiles/pan_kernel.dir/kernel/arch/x86_64/serial.cpp.obj -c /home/forbiddentypev/Dev/OS/Pan/kernel/arch/x86_64/serial.cpp",
+  "file": "/home/forbiddentypev/Dev/OS/Pan/kernel/arch/x86_64/serial.cpp",
+  "output": "CMakeFiles/pan_kernel.dir/kernel/arch/x86_64/serial.cpp.obj"
+},
+{
+  "directory": "/home/forbiddentypev/Dev/OS/Pan/build",
+  "command": "/home/forbiddentypev/opt/cross/bin/x86_64-elf-g++  -I/home/forbiddentypev/Dev/OS/Pan/kernel/include -I/home/forbiddentypev/Dev/OS/Pan/kernel/arch/x86_64/include -ffreestanding -fno-exceptions -fno-rtti -mno-red-zone -mcmodel=kernel -O2 -nostdlib -Wall -Wextra -fno-asynchronous-unwind-tables -fno-unwind-tables -o CMakeFiles/pan_kernel.dir/kernel/arch/x86_64/early_console.cpp.obj -c /home/forbiddentypev/Dev/OS/Pan/kernel/arch/x86_64/early_console.cpp",
+  "file": "/home/forbiddentypev/Dev/OS/Pan/kernel/arch/x86_64/early_console.cpp",
+  "output": "CMakeFiles/pan_kernel.dir/kernel/arch/x86_64/early_console.cpp.obj"
+},
+{
+  "directory": "/home/forbiddentypev/Dev/OS/Pan/build",
+  "command": "/home/forbiddentypev/opt/cross/bin/x86_64-elf-g++  -I/home/forbiddentypev/Dev/OS/Pan/kernel/include -I/home/forbiddentypev/Dev/OS/Pan/kernel/arch/x86_64/include -ffreestanding -fno-exceptions -fno-rtti -mno-red-zone -mcmodel=kernel -O2 -nostdlib -Wall -Wextra -fno-asynchronous-unwind-tables -fno-unwind-tables -o CMakeFiles/pan_kernel.dir/kernel/init/kmain.cpp.obj -c /home/forbiddentypev/Dev/OS/Pan/kernel/init/kmain.cpp",
+  "file": "/home/forbiddentypev/Dev/OS/Pan/kernel/init/kmain.cpp",
+  "output": "CMakeFiles/pan_kernel.dir/kernel/init/kmain.cpp.obj"
+}
+]
