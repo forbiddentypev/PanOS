@@ -4,6 +4,9 @@
 # Fedora: dnf install gcc-x86_64-elf nasm
 
 cmake_minimum_required(VERSION 3.16)
+
+find_program(CMAKE_ASM_NASM_COMPILER nasm REQUIRED)
+
 project(PanOS LANGUAGES C CXX ASM_NASM)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -35,7 +38,6 @@ find_program(CMAKE_ASM_NASM_COMPILER nasm REQUIRED)
 
 enable_language(C)
 enable_language(CXX)
-enable_language(ASM_NASM)
 
 # Kernel C/C++ flags (ARCHITECTURE.md Phase 0)
 set(KERNEL_FLAGS "-ffreestanding -fno-exceptions -fno-rtti -mno-red-zone -mcmodel=kernel -O2 -nostdlib -Wall -Wextra -fno-asynchronous-unwind-tables -fno-unwind-tables")

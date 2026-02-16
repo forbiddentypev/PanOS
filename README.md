@@ -251,6 +251,17 @@ pan-os/
 
 ---
 
+## Building commands
+
+```
+mkdir build
+cd build
+cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-x86_64-elf.cmake ..
+make -j1
+```
+
+---
+
 ## Mandatory Compiler Flags
 
 **Kernel flags:**
