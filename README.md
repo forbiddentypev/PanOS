@@ -1,143 +1,315 @@
-# Pan-OS
+# PAN OS – Monolithic 64-bit Performance Kernel
 
+## Role
 
+You are a senior low-level systems architect designing a high-performance 64-bit monolithic kernel named Pan OS.
 
-## Getting started
+**Constraints:**
+- Architecture: x86_64 only
+- Mode: Long mode (64-bit)
+- Kernel Type: Monolithic Modular
+- Language: C++ (freestanding) + minimal C + Assembly
+- No microkernel architecture
+- No userspace drivers
+- No hybrid model
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+**Primary objective:** Performance and deterministic control over hardware.  
+**Security:** Secondary to speed in early stages.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+---
 
-## Add your files
+## Kernel Philosophy
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+Pan OS is:
+- **Monolithic**
+- **Modular**
+- **Cache-aware**
+- **Minimal abstraction**
+- **Low-overhead syscall model**
+
+All major subsystems live in kernel space:
+- Scheduler
+- Memory Manager
+- VFS
+- Drivers
+- Network stack
+
+**Rules:**
+- No driver runs in user space
+- No IPC message passing between core subsystems
+- Direct function calls preferred
+
+---
+
+## Global Architecture Rules
+
+- All architecture-specific code: `kernel/arch/x86_64/`
+- No dynamic allocation before heap ready
+- No exceptions in kernel
+- No RTTI in kernel
+- STL forbidden inside kernel
+- Every subsystem must expose minimal header interface
+- No abstraction layers unless necessary for performance scaling
+
+**Optimize for:**
+- Cache locality
+- Reduced context switches
+- Reduced memory fragmentation
+
+---
+
+## Phases
+
+### Phase 0 – Toolchain Control (MANDATORY)
+
+- **Architecture:** x86_64-elf
+- **Compiler flags:** `-ffreestanding -fno-exceptions -fno-rtti -mno-red-zone -mcmodel=kernel -O2` (later O3)
+- **Bootloader:** GRUB (Multiboot2)
+- **Deliverable:** Kernel boots via GRUB in 64-bit mode
+- **Reason:** Focus on kernel engineering, not boot complexity
+
+### Phase 1 – Minimal 64-bit Entry
+
+**Folder:** `kernel/arch/x86_64/`
+
+**Tasks:**
+1. Define linker script for higher-half kernel
+2. Setup stack
+3. Confirm long mode
+4. Map VGA memory
+5. Print text
+
+**Verification:** QEMU boot prints `PAN OS 64 BIT KERNEL INITIALIZED`. If fails → stop.
+
+### Phase 2 – Memory Subsystem (Performance-Oriented)
+
+**Folder:** `kernel/core/memory/`
+
+**Strict order:**
+1. Physical Memory Manager (bitmap or buddy allocator)
+2. Paging (4-level paging)
+3. Higher-half direct map
+4. Kernel heap (bump allocator first)
+5. Slab allocator (object caching for speed)
+
+**Performance rules:** Avoid fragmentation, align allocations to cache lines (64 bytes), keep frequently used structs contiguous.
+
+**Verification:** Allocate, free, stress test in loop.
+
+### Phase 3 – Interrupt + Timer Core
+
+**Folder:** `kernel/arch/x86_64/interrupts/`
+
+**Tasks:** IDT setup, PIC remap, PIT timer, enable interrupts.
+
+**Verification:** Timer interrupt increments counter. No scheduler yet.
+
+### Phase 4 – Scheduler (Low Latency)
+
+**Folder:** `kernel/core/scheduler/`
+
+**Design:** Preemptive round-robin first. Later: priority-based.
+
+**Performance:** Context switch in assembly, save minimal registers, avoid heap allocation in scheduler.
+
+**Verification:** Two kernel threads alternate.
+
+### Phase 5 – Syscall Fast Path
+
+- Use **SYSCALL/SYSRET** (not `int 0x80`)
+- **Folder:** `system/syscall/`
+- **Verification:** User program prints via syscall
+
+### Phase 6 – Driver Core
+
+All drivers in kernel space. No message-based IPC.
+
+**Order:** VGA → Keyboard → RAMDisk → ATA (PIO first) → PCI → USB (late) → Network (last)
+
+### Phase 7 – VFS (Direct Call Model)
+
+**Folder:** `fs/vfs/`
+
+**Design:** VFS dispatch through function pointers. No message passing. No user-mode FS servers.
+
+**Order:** VFS core → tmpfs → devfs → FAT32 → EXT2
+
+### Phase 8 – ELF Loader + Userspace
+
+**Folder:** `kernel/core/loader/`, `apps/`, `lib/libc/`
+
+**Tasks:** ELF parser, map user program memory, switch to ring 3, syscall interface.
+
+**Verification:** Shell launches app.
+
+---
+
+## Performance Directives
+
+- Kernel compiled with `-O2` minimum
+- Avoid virtual functions in hot paths
+- Use `inline` where necessary
+- No heavy abstraction in drivers
+- Keep structs POD where possible
+- Reduce lock contention
+- Prefer spinlocks over mutex in kernel
+
+---
+
+## Development Law
+
+**Never move upward unless lower layer is stable.**
+
+Dependency order:
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/ftypev/pan-os.git
-git branch -M main
-git push -uf origin main
+Memory → Interrupts → Scheduler → Syscalls → Drivers → VFS → Userspace
 ```
 
-## Integrate with your tools
+---
 
-* [Set up project integrations](https://gitlab.com/ftypev/pan-os/-/settings/integrations)
+## Forbidden
 
-## Collaborate with your team
+- Microkernel architecture
+- Userspace drivers
+- Heavy OOP inside hot kernel paths
+- GUI before scheduler stable
+- Network before VFS stable
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+---
 
-## Test and Deploy
+## Long-term Target
 
-Use the built-in continuous integration in GitLab.
+Pan OS must:
+- Boot in &lt; 1 second (QEMU baseline)
+- Run multitasking
+- Execute native apps
+- Provide direct hardware performance API
+- Support game engine integration
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+---
 
-***
+# Build System Architecture – Official Policy
 
-# Editing this README
+Pan OS uses **CMake** as the official build orchestrator.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+**CMake is used strictly as:**
+- Target manager
+- Dependency resolver
+- Multi-directory coordinator
 
-## Suggestions for a good README
+**CMake must NOT:**
+- Control architecture decisions
+- Override linker script behavior
+- Inject host system libraries
+- Enable hosted compilation mode
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+---
 
-## Name
-Choose a self-explaining name for your project.
+## Cross Compilation Rules
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+- Pan OS must always be built using a **cross compiler**
+- **Target:** x86_64-elf
+- Host compiler usage is strictly forbidden
+- All builds must be freestanding
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+---
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## Required Toolchain
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+- x86_64-elf-gcc
+- x86_64-elf-g++
+- nasm
+- ld (cross)
+- cmake
+- qemu-system-x86_64
+- **Bootloader:** GRUB (Multiboot2)
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+---
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+## Required Build Structure
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
-=======
-# PanOS
-Make programing fuse with creativity
-=======
-# Pan OS
-
-A high-performance 64-bit monolithic kernel for x86_64. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full specification.
-
-## Phase 0 – Build (GRUB + QEMU)
-
-### Prerequisites
-
-- **x86_64-elf toolchain** (bare-metal, no host libc)
-  - [Build cross-compiler](https://wiki.osdev.org/GCC_Cross-Compiler), or
-  - Ubuntu/Debian: `apt install gcc-x86-64-elf`
-  - Arch: `pacman -S x86_64-elf-gcc`
-  - Fedora: build from source (see osdev wiki)
-- **nasm** – `dnf install nasm` / `apt install nasm`
-- **grub-mkrescue** – `dnf install grub2-tools xorriso` / `apt install grub-pc-bin xorriso`
-- **QEMU** – `dnf install qemu-system-x86` / `apt install qemu-system-x86`
-
-### Build
-
-```bash
-mkdir build && cd build
-# Use toolchain file for proper x86_64-elf (bare-metal) build:
-cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain-x86_64-elf.cmake ..
-make
-make pan_iso   # requires grub2-tools, xorriso
+```
+pan-os/
+├── CMakeLists.txt
+├── toolchain-x86_64.cmake
+├── linker.ld
+├── kernel/
+│   └── CMakeLists.txt
+├── drivers/
+│   └── CMakeLists.txt
+├── fs/
+│   └── CMakeLists.txt
+├── lib/
+│   └── CMakeLists.txt
+├── system/
+│   └── CMakeLists.txt
+├── apps/
+│   └── CMakeLists.txt
+└── build/
 ```
 
-Or without toolchain file (uses first `x86_64-elf-gcc` in PATH):
-```bash
-cmake ..
-make
-```
+---
 
-Output: `build/pan_kernel` (always), `build/pan.iso` (if grub-mkrescue available)
+## Mandatory Compiler Flags
 
-### Run
+**Kernel flags:**
+- `-ffreestanding`
+- `-fno-exceptions`
+- `-fno-rtti`
+- `-mno-red-zone`
+- `-mcmodel=kernel`
+- `-O2`
 
-```bash
-# VGA output
-qemu-system-x86_64 -cdrom build/pan.iso
+No standard library allowed. No libc linking.
 
-# VGA + serial (for Phase 1 higher-half + serial test)
-qemu-system-x86_64 -cdrom build/pan.iso -serial stdio
-```
+---
 
-Expected (Phase 1): `PAN OS 64 BIT KERNEL INITIALIZED`, `[kernel] kernel_main @ 0x...`, `[kernel] OK: running from higher-half`.
+## Linker Control
+
+- **Custom linker script:** `linker.ld`
+- CMake must pass: `-T linker.ld -nostdlib -static`
+- Linker script defines: higher-half mapping, kernel entry point, section alignment, page alignment (4K minimum)
+
+---
+
+## Build Targets Required
+
+- `kernel` (ELF)
+- `iso` (bootable ISO)
+- `run` (QEMU launch)
+- `clean`
+- `debug`
+
+The `run` target must automatically boot using QEMU.
+
+---
+
+## ISO Generation Policy
+
+**ISO must contain:**
+- `/boot/kernel.elf`
+- `/boot/grub/grub.cfg`
+
+**ISO generation:** GRUB with Multiboot2
+
+---
+
+## Stability Law
+
+Every successful build must:
+1. Produce ELF kernel
+2. Produce ISO
+3. Boot in QEMU
+4. Print boot confirmation
+
+**If any of these fail → development must stop.**
+
+---
+
+## Growth Policy
+
+As the project scales:
+- Each subsystem must define its own `CMakeLists.txt`
+- No monolithic CMake file allowed
+- Subdirectories must expose only minimal public headers
